@@ -2,28 +2,97 @@
 
 This guide will help you set up and run the Maintenance Tracker web application on your Windows computer. No prior technical experience is needed, just follow these steps carefully!
 
-## Step 1: Install Python
+## Option 1: Quick Setup (Recommended - Using Batch Scripts)
+
+This is the easiest way to get started. You'll use two script files: `setup.bat` (run once) and `run_app.bat` (run each time you want to use the app).
+
+**If you don't have `setup.bat` and `run_app.bat` files:**
+*   You can create them yourself. Open Notepad, copy the content for each script (provided by your developer or in the sections below if this README is part of the source code), paste it into Notepad, and save the files as `setup.bat` and `run_app.bat` respectively. Make sure when you save, the "Save as type" is set to "All Files (*.*)" so it doesn't save as `setup.bat.txt`.
+*   Place these two `.bat` files in the main `maint-tracker` project folder (the same folder that contains `app.py` and `requirements.txt`).
+
+### 1. Run the Setup Script (Run this only ONCE)
+
+   The `setup.bat` script will:
+   *   Check if Python 3 is installed and attempt to install it using `winget` if it's missing (this requires an internet connection and may need administrator approval).
+   *   Create an isolated Python environment for the application.
+   *   Install all the necessary application dependencies.
+   *   Initialize the application's database.
+
+   **To run `setup.bat`:**
+   1.  Navigate to your `maint-tracker` project folder in File Explorer.
+   2.  Double-click the `setup.bat` file.
+   3.  A command prompt window will open and show the progress. Read any messages carefully.
+   4.  If Python needs to be installed via `winget`, the script might instruct you to re-run `setup.bat` after the Python installer closes. Please follow those instructions.
+   5.  Wait for the script to finish. It will say "Setup Complete!" and pause. You can then press any key to close the window.
+
+### 2. Run the Application Script (Run this EACH TIME you use the app)
+
+   The `run_app.bat` script will:
+   *   Activate the Python environment.
+   *   Allow you to (optionally) specify paths to SSL certificate files if you want to use a secure HTTPS connection.
+   *   Start the Maintenance Tracker web application.
+
+   **To run `run_app.bat`:**
+   1.  Navigate to your `maint-tracker` project folder.
+   2.  Double-click the `run_app.bat` file.
+   3.  A command prompt window will open.
+       *   **SSL Configuration (Optional):** The script will pause and show instructions if you want to set paths for SSL certificate and key files. If you have these files and want to use them:
+           *   Edit the `run_app.bat` file itself (right-click -> Edit or Open with Notepad).
+           *   Find the lines:
+             ```batch
+             set "LOCALHOST_SSL_CRT="
+             set "LOCALHOST_SSL_KEY="
+             ```
+           *   Change them to the full paths of your certificate and key files, for example:
+             ```batch
+             set "LOCALHOST_SSL_CRT=C:\MyCerts\localhost.crt"
+             set "LOCALHOST_SSL_KEY=C:\MyCerts\localhost.key"
+             ```
+           *   Save the `run_app.bat` file and then run it again.
+       *   If you don't set SSL paths, the application will run using HTTP, which is fine for local use.
+   4.  The script will then start the application. You will see output in the command prompt, including a line like:
+       `* Running on https://localhost:5050/` (if SSL is used) or `* Running on http://localhost:5050/`.
+
+   5.  **Open the Application in your Web Browser**:
+       *   Open your web browser (Chrome, Edge, Firefox).
+       *   If SSL is active, go to: `https://localhost:5050` (or `https://127.0.0.1:5050`)
+       *   If SSL is not active, go to: `http://localhost:5050` (or `http://127.0.0.1:5050`)
+       *   Your browser might show a warning if you are using self-signed SSL certificates (e.g., "Your connection is not private"). You usually need to click "Advanced" and then "Proceed to localhost (unsafe)".
+
+   You should now see the Maintenance Tracker application!
+
+### Stopping the Application
+*   Go back to the command prompt window where the application is running (the one opened by `run_app.bat`).
+*   Press `Ctrl + C` (hold down the Ctrl key and press C). You might need to press it a couple of times.
+*   The script will say "Application stopped." and pause. Press any key to close it.
+
+---
+
+## Option 2: Manual Setup Steps
+
+If you prefer to run commands manually or if the batch scripts don't work for some reason, follow these detailed steps.
+
+### Step 1: Install Python (if not already installed)
 
 Python is the programming language this application is built with.
 
-1.  **Download Python**:
-    *   Open your web browser (like Chrome, Edge, or Firefox) and go to the official Python website: [python.org](https://www.python.org/)
-    *   Hover over "Downloads" in the menu. You should see a button like "Download for Windows" with the latest Python version (e.g., Python 3.1x.x). Click it.
-    *   An installer file (e.g., `python-3.1x.x-amd64.exe`) will download.
+1.  **Check if Python is installed & Install using winget (Recommended for newer Windows)**:
+    *   Open Command Prompt (Start menu, type `cmd`, press Enter).
+    *   Type `python --version`. If you see a version like `Python 3.x.x`, you have Python.
+    *   If not, you can try installing with `winget` (a Windows package manager). Type:
+        ```bash
+        winget install -e --id Python.Python.3 --accept-package-agreements --accept-source-agreements
+        ```
+    *   If `winget` installation fails or you don't have `winget`, proceed to manual download.
 
-2.  **Run the Python Installer**:
-    *   Once downloaded, open the installer file.
-    *   **VERY IMPORTANT**: On the first screen of the installer, check the box at the bottom that says **"Add Python 3.x to PATH"** or **"Add python.exe to PATH"**. This will make it much easier to run Python later.
+2.  **Manual Download & Install**:
+    *   Open your web browser and go to: [python.org](https://www.python.org/)
+    *   Hover over "Downloads" and click the button for the latest Python for Windows.
+    *   Run the downloaded installer.
+    *   **VERY IMPORTANT**: On the first screen, check the box **"Add Python 3.x to PATH"**.
     *   Click "Install Now".
-    *   Wait for the installation to complete. You might see a "Setup was successful" message. You can close the installer.
 
-3.  **Verify Python Installation (Optional)**:
-    *   Click the Start menu, type `cmd`, and open "Command Prompt".
-    *   In the black window that appears, type `python --version` and press Enter.
-    *   If Python is installed correctly, you should see something like `Python 3.1x.x`.
-    *   You can close the Command Prompt window.
-
-## Step 2: Get the Application Files
+### Step 2: Get the Application Files
 
 If you received the application files as a ZIP folder:
 1.  Locate the ZIP file (e.g., `maint-tracker.zip`).
@@ -43,27 +112,27 @@ If you need to download it from a place like GitHub:
     *   Type `git clone https://github.com/username/projectname.git` (replace with the actual URL) and press Enter.
     *   This will create a folder with the project files.
 
-## Step 3: Install Application Dependencies
-
-The application needs some extra Python packages to work.
+### Step 3: Install Application Dependencies (Manual)
 
 1.  **Open Command Prompt in the Project Folder**:
-    *   Go to the `maint-tracker` folder that you extracted or cloned.
-    *   In the address bar of File Explorer (where it shows the folder path), type `cmd` and press Enter. This will open Command Prompt directly in that folder.
+    *   Go to the `maint-tracker` folder.
+    *   In File Explorer's address bar, type `cmd` and press Enter.
 
-2.  **Create a Virtual Environment (Recommended)**:
-    This creates an isolated space for this project's packages.
-    *   In Command Prompt, type: `python -m venv venv` and press Enter.
-    *   Wait a moment for it to create a folder named `venv`.
-    *   Now, activate the virtual environment by typing: `venv\Scripts\activate` and press Enter.
-    *   You should see `(venv)` at the beginning of your command prompt line, like `(venv) C:\Users\YourName\Desktop\maint-tracker>`.
+2.  **Create and Activate Virtual Environment**:
+    *   In Command Prompt, type these commands one by one, pressing Enter after each:
+        ```bash
+        python -m venv venv
+        venv\Scripts\activate
+        ```
+    *   You should see `(venv)` at the start of your prompt.
 
 3.  **Install Packages**:
-    *   With the virtual environment active (you see `(venv)`), type the following command in Command Prompt and press Enter:
-        `pip install -r requirements.txt`
-    *   This will download and install all the necessary packages listed in the `requirements.txt` file. Wait for it to finish. You might see a lot of text scrolling.
+    *   With `(venv)` active, type and run:
+        ```bash
+        pip install -r requirements.txt
+        ```
 
-## Step 4: SSL Certificates (For Secure Connection - HTTPS)
+### Step 4: SSL Certificates (Manual - Optional)
 
 This application can run with a secure (HTTPS) connection if you have SSL certificates. If you don't have these or don't know what they are, the app will still work using a regular (HTTP) connection.
 
@@ -86,49 +155,35 @@ This application can run with a secure (HTTPS) connection if you have SSL certif
 *   **If you DO NOT have SSL certificates**:
     Don't worry! The application will automatically run using HTTP. You'll see a message in the console saying "SSL certificate or key not found... Running without SSL."
 
-## Step 5: Initialize the Database
+### Step 5: Initialize the Database (Manual)
 
-The application uses a database to store information. You need to create it the first time.
+1.  With `(venv)` active in Command Prompt (in project folder):
+    ```bash
+    flask initdb
+    ```
+    You should see "Initialized the database."
 
-1.  **Make sure you are in the project folder in Command Prompt** and your virtual environment is active (`(venv)` is visible).
-2.  The application is now set up to automatically create the database if it doesn't exist when you run it. So, this step might be handled automatically when you run the app.
-3.  However, if you encounter errors about "no such table", you can explicitly create the database by typing:
-    `flask initdb`
-    And press Enter. You should see a message "Initialized the database."
+### Step 6: Run the Application (Manual)
 
-## Step 6: Run the Application
+1.  With `(venv)` active in Command Prompt (in project folder):
+    ```bash
+    python app.py
+    ```
+2.  Look for `* Running on ...` and open the URL (`http://localhost:5050` or `https://localhost:5050`) in your browser.
 
-You're ready to start the web application!
-
-1.  **Make sure you are in the project folder in Command Prompt** and your virtual environment is active (`(venv)` is visible).
-2.  Type the following command and press Enter:
-    `python app.py`
-3.  You will see some output in the Command Prompt. Look for lines like:
-    *   `Attempting to start Flask with SSL...` (if you set up SSL) OR `SSL certificate or key not found... Running without SSL.`
-    *   `* Running on https://0.0.0.0:5050/` (if SSL) OR `* Running on http://0.0.0.0:5050/` (if no SSL)
-    *   `(Press CTRL+C to quit)`
-
-4.  **Open the Application in your Web Browser**:
-    *   Open your web browser (Chrome, Edge, Firefox).
-    *   If SSL is active, go to: `https://localhost:5050` or `https://127.0.0.1:5050`
-    *   If SSL is not active, go to: `http://localhost:5050` or `http://127.0.0.1:5050`
-    *   Your browser might show a warning if you are using self-signed SSL certificates for HTTPS (e.g., "Your connection is not private"). You usually need to click "Advanced" and then "Proceed to localhost (unsafe)" or a similar option. This is okay for local development.
-
-You should now see the Maintenance Tracker application!
-
-## Step 7: Using the Application
+### Using and Stopping the Application (Manual)
 
 *   **Submit Deficiency**: Click "Submit Deficiency" in the navigation bar to report a new issue.
     *   Your browser will ask for permission to use your camera if you try the "Scan QR Code" or "Use Camera" buttons. You need to allow this for those features to work.
 *   **Dashboard**: The main page shows a list of all reported deficiencies.
 
-## Stopping the Application
+**Stopping the Application**:
 
 *   Go back to the Command Prompt window where the application is running.
 *   Press `Ctrl + C` (hold down the Ctrl key and press C).
 *   You might need to press it a couple of times.
 
-## Running the Application Again Later
+**Running the Application Again Later (Manual)**:
 
 1.  Open Command Prompt.
 2.  Navigate to your project folder (e.g., `cd Desktop\maint-tracker`).
