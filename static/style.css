@@ -1,0 +1,26 @@
+body {
+    font-family: sans-serif;
+}
+
+.camera-container video, .camera-container canvas {
+    max-width: 100%;
+    border-radius: 5px;
+}
+
+.img-thumbnail-small {
+    object-fit: cover;
+}
+
+/* Styles for sortable table headers */
+th[data-sort]::after {
+    content: ' \2195'; /* Up-down arrow */
+    opacity: 0.3;
+}
+th[data-sort].sort-asc::after {
+    content: ' \2191'; /* Up arrow */
+    opacity: 1;
+}
+th[data-sort].sort-desc::after {
+    content: ' \2193'; /* Down arrow */
+    opacity: 1;
+} 

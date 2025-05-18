@@ -1,0 +1,264 @@
+{% extends 'base.html' %}
+
+{% block title %}Submit Deficiency - Maintenance Tracker{% endblock %}
+
+{% block head_extra %}
+<style>
+    .camera-container {
+        position: relative;
+        width: 100%;
+        max-width: 500px;
+        margin-bottom: 15px;
+    }
+    #cameraFeed, #qrFeed {
+        width: 100%;
+        border: 1px solid #ccc;
+        background-color: #f0f0f0;
+    }
+    #capturedImage {
+        max-width: 100%;
+        margin-top: 10px;
+        border: 1px solid #ddd;
+    }
+    .btn-action {
+        margin-top: 5px;
+        margin-right: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Report a Maintenance Deficiency</h2>
+    <p>Fill out the form below to report a new maintenance issue. You can scan a QR code for location/equipment information or take a picture of the issue.</p>
+
+    <form method="POST" enctype="multipart/form-data" id="deficiencyForm">
+        
+        <div class="form-group">
+            <label for="description">Description of Deficiency</label>
+            <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                <label for="category">Category</label>
+                <select id="category" name="category" class="form-control" required>
+                    <option selected disabled value="">Choose...</option>
+                    <option>Plumbing</option>
+                    <option>Electrical</option>
+                    <option>HVAC</option>
+                    <option>Structural</option>
+                    <option>Safety</option>
+                    <option>Equipment</option>
+                    <option>IT/Networking</option>
+                    <option>Other</option>
+                </select>
+            </div>
+            <div class="form-group col-md-6">
+                <label for="location">Location / Equipment ID</label>
+                <input type="text" class="form-control" id="location" name="location" placeholder="e.g., Room 101, AHU-03, North Stairwell" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="severity">Severity</label>
+            <select id="severity" name="severity" class="form-control" required>
+                <option selected disabled value="">Choose...</option>
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+                <option value="Critical">Critical</option>
+            </select>
+        </div>
+
+        <hr>
+        <h5>QR Code Scanner & Camera</h5>
+
+        <!-- QR Code Scanner -->
+        <div class="form-group">
+            <label>Scan QR Code (for Location/Equipment ID)</label>
+            <div class="camera-container">
+                <video id="qrFeed" playsinline style="display:none;"></video>
+            </div>
+            <button type="button" id="startQRScan" class="btn btn-info btn-action">Scan QR Code</button>
+            <button type="button" id="stopQRScan" class="btn btn-secondary btn-action" style="display:none;">Stop QR Scanner</button>
+            <p id="qrResult">QR Code Data: <span id="qrData">None</span></p>
+        </div>
+
+        <!-- Camera for Picture -->
+        <div class="form-group">
+            <label for="image">Upload Picture of Deficiency</label>
+            <div class="camera-container">
+                <video id="cameraFeed" playsinline style="display:none;"></video>
+                <canvas id="canvas" style="display:none;"></canvas> <!-- For capturing frame -->
+            </div>
+            <button type="button" id="startCamera" class="btn btn-primary btn-action">Use Camera</button>
+            <button type="button" id="captureImage" class="btn btn-success btn-action" style="display:none;">Take Picture</button>
+            <button type="button" id="stopCamera" class="btn btn-secondary btn-action" style="display:none;">Stop Camera</button>
+            <br>
+            <input type="file" class="form-control-file mt-2" id="image" name="image" accept="image/*">
+            <img id="capturedImagePreview" src="#" alt="Captured Image Preview" style="display:none; max-width: 200px; margin-top:10px;"/>
+            <input type="hidden" name="captured_image_data" id="captured_image_data">
+        </div>
+
+        <button type="submit" class="btn btn-success btn-lg">Submit Report</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<!-- QR Scanner Library -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // QR Code Scanner Elements
+        const qrFeed = document.getElementById('qrFeed');
+        const startQRScanBtn = document.getElementById('startQRScan');
+        const stopQRScanBtn = document.getElementById('stopQRScan');
+        const qrDataSpan = document.getElementById('qrData');
+        const locationInput = document.getElementById('location');
+        let qrStream;
+        let qrAnimation;
+
+        // Camera Elements
+        const cameraFeed = document.getElementById('cameraFeed');
+        const startCameraBtn = document.getElementById('startCamera');
+        const captureImageBtn = document.getElementById('captureImage');
+        const stopCameraBtn = document.getElementById('stopCamera');
+        const canvas = document.getElementById('canvas');
+        const imageInput = document.getElementById('image');
+        const capturedImagePreview = document.getElementById('capturedImagePreview');
+        const capturedImageDataInput = document.getElementById('captured_image_data');
+
+        let cameraStream;
+
+        // --- QR Code Functionality ---
+        startQRScanBtn.addEventListener('click', async () => {
+            try {
+                qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                qrFeed.srcObject = qrStream;
+                qrFeed.style.display = 'block';
+                qrFeed.play();
+                startQRScanBtn.style.display = 'none';
+                stopQRScanBtn.style.display = 'inline-block';
+                requestAnimationFrame(tickQR);
+            } catch (err) {
+                console.error("Error accessing QR camera: ", err);
+                alert("Could not access the camera for QR scanning. Please ensure permissions are granted.");
+            }
+        });
+
+        function tickQR() {
+            if (qrFeed.readyState === qrFeed.HAVE_ENOUGH_DATA) {
+                const qrCanvasElement = document.createElement('canvas');
+                qrCanvasElement.width = qrFeed.videoWidth;
+                qrCanvasElement.height = qrFeed.videoHeight;
+                const qrCanvas = qrCanvasElement.getContext('2d');
+                qrCanvas.drawImage(qrFeed, 0, 0, qrCanvasElement.width, qrCanvasElement.height);
+                const imageData = qrCanvas.getImageData(0, 0, qrCanvasElement.width, qrCanvasElement.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "dontInvert",
+                });
+
+                if (code) {
+                    qrDataSpan.textContent = code.data;
+                    locationInput.value = code.data; // Populate location field
+                    stopQRScan(); // Stop scanning once a code is found
+                    alert("QR Code Detected: " + code.data);
+                } else {
+                    qrAnimation = requestAnimationFrame(tickQR);
+                }
+            }
+        }
+
+        function stopQRScan() {
+            if (qrStream) {
+                qrStream.getTracks().forEach(track => track.stop());
+            }
+            qrFeed.style.display = 'none';
+            qrFeed.srcObject = null;
+            startQRScanBtn.style.display = 'inline-block';
+            stopQRScanBtn.style.display = 'none';
+            if (qrAnimation) {
+                cancelAnimationFrame(qrAnimation);
+            }
+        }
+        stopQRScanBtn.addEventListener('click', stopQRScan);
+
+        // --- Camera Functionality ---
+        startCameraBtn.addEventListener('click', async () => {
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                cameraFeed.srcObject = cameraStream;
+                cameraFeed.style.display = 'block';
+                cameraFeed.play();
+                startCameraBtn.style.display = 'none';
+                captureImageBtn.style.display = 'inline-block';
+                stopCameraBtn.style.display = 'inline-block';
+                imageInput.style.display = 'none'; // Hide file input if camera is active
+            } catch (err) {
+                console.error("Error accessing camera: ", err);
+                alert("Could not access the camera. Please ensure permissions are granted and try again, or use the file upload option.");
+            }
+        });
+
+        captureImageBtn.addEventListener('click', () => {
+            canvas.width = cameraFeed.videoWidth;
+            canvas.height = cameraFeed.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(cameraFeed, 0, 0, canvas.width, canvas.height);
+            
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85); // Capture as JPEG, 85% quality
+            capturedImagePreview.src = dataUrl;
+            capturedImagePreview.style.display = 'block';
+            
+            // Create a new File object from the Data URL
+            fetch(dataUrl)
+                .then(res => res.blob())
+                .then(blob => {
+                    const file = new File([blob], "camera_capture.jpg", { type: 'image/jpeg' });
+                    
+                    // Create a DataTransfer to simulate a file input event
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    imageInput.files = dataTransfer.files;
+                    
+                    // Display the captured image name or a placeholder
+                    console.log("Image captured and set to file input:", imageInput.files[0].name);
+                    // You might want to update a label or some visual indicator here
+                });
+
+            stopCamera(); // Optionally stop camera after capture
+        });
+
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+            }
+            cameraFeed.style.display = 'none';
+            cameraFeed.srcObject = null;
+            startCameraBtn.style.display = 'inline-block';
+            captureImageBtn.style.display = 'none';
+            stopCameraBtn.style.display = 'none';
+            imageInput.style.display = 'block'; // Show file input again
+        }
+        stopCameraBtn.addEventListener('click', stopCamera);
+
+        // When a file is selected via input, show its preview
+        imageInput.addEventListener('change', function(event) {
+            if (event.target.files && event.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    capturedImagePreview.src = e.target.result;
+                    capturedImagePreview.style.display = 'block';
+                }
+                reader.readAsDataURL(event.target.files[0]);
+                // If camera was active, ensure it stops
+                if (cameraStream) stopCamera();
+            }
+        });
+
+    });
+</script>
+{% endblock %} 

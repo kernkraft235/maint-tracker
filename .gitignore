@@ -1,0 +1,30 @@
+# SSL Certificates
+*.crt
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# SQLite
+*.db
+*.db-journal*
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# macOS
+.DS_Store 
